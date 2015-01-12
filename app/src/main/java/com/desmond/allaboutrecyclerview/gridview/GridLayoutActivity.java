@@ -1,24 +1,34 @@
-package com.desmond.allaboutrecyclerview;
+package com.desmond.allaboutrecyclerview.gridview;
 
-import android.os.Bundle;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.ActionBarActivity;
+import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import com.desmond.allaboutrecyclerview.R;
 
-public class MainActivity extends ActionBarActivity {
+public class GridLayoutActivity extends ActionBarActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_grid_layout);
+
+        if (savedInstanceState == null) {
+            FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+            ft.replace(R.id.fragment_container,
+                    GridLayoutFragment.newInstance(),
+                    GridLayoutFragment.TAG)
+                    .commit();
+        }
     }
 
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
+        getMenuInflater().inflate(R.menu.menu_grid_layout, menu);
         return true;
     }
 
