@@ -25,15 +25,15 @@ public class NumberAdapter extends RecyclerView.Adapter<TextViewHolder> {
     }
 
     @Override
-    public TextViewHolder onCreateViewHolder(ViewGroup viewGroup, int i) {
+    public TextViewHolder onCreateViewHolder(ViewGroup viewGroup, int viewType) {
         View view = LayoutInflater.from(viewGroup.getContext())
                 .inflate(R.layout.item, viewGroup, false);
         return new TextViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(TextViewHolder textViewHolder, int i) {
-
+    public void onBindViewHolder(TextViewHolder textViewHolder, int position) {
+        textViewHolder.setText(mLabels.get(position));
     }
 
     @Override

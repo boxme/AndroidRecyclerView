@@ -41,9 +41,11 @@ public class GridLayoutFragment extends Fragment {
 
         RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.grid_recyclerview);
         recyclerView.setHasFixedSize(true);
+
         GridLayoutManager gridLayoutManager =
                 new GridLayoutManager(getActivity(), 2, GridLayoutManager.VERTICAL, false);
         recyclerView.setLayoutManager(gridLayoutManager);
 
+        recyclerView.setAdapter(new NumberAdapter(30));
     }
 }
