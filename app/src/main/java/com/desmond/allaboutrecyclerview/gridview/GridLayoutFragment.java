@@ -21,6 +21,8 @@ public class GridLayoutFragment extends Fragment {
 
     public static final String TAG = GridLayoutFragment.class.getSimpleName();
 
+    private GridLayoutManager mGridLayoutMgr;
+
     public static GridLayoutFragment newInstance() {
         GridLayoutFragment fragment = new GridLayoutFragment();
         return fragment;
@@ -42,9 +44,9 @@ public class GridLayoutFragment extends Fragment {
         RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.grid_recyclerview);
         recyclerView.setHasFixedSize(true);
 
-        GridLayoutManager gridLayoutManager =
-                new GridLayoutManager(getActivity(), 2, GridLayoutManager.VERTICAL, false);
-        recyclerView.setLayoutManager(gridLayoutManager);
+        mGridLayoutMgr = new GridLayoutManager(
+                getActivity(), 2, GridLayoutManager.VERTICAL, false);
+        recyclerView.setLayoutManager(mGridLayoutMgr);
 
         recyclerView.setAdapter(new NumberAdapter(30));
     }
