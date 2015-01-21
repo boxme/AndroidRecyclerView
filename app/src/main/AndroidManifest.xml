@@ -20,6 +20,10 @@
             android:name=".gridview.GridLayoutActivity"
             android:label="@string/title_activity_grid_layout" >
         </activity>
+        <activity
+            android:name=".listview.ListLayoutActivity"
+            android:label="@string/title_activity_list_layout" >
+        </activity>
     </application>
 
 </manifest>

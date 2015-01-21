@@ -8,6 +8,7 @@ import android.view.MenuItem;
 import android.view.View;
 
 import com.desmond.allaboutrecyclerview.gridview.GridLayoutActivity;
+import com.desmond.allaboutrecyclerview.listview.ListLayoutActivity;
 
 
 public class MainActivity extends ActionBarActivity {
@@ -44,5 +45,10 @@ public class MainActivity extends ActionBarActivity {
     public void showGridView(View view) {
         Intent showGridViewIntent = new Intent(this, GridLayoutActivity.class);
         startActivity(showGridViewIntent);
+    }
+
+    public void showListView(View view) {
+        Intent showListViewIntent = new Intent(this, ListLayoutActivity.class);
+        startActivity(showListViewIntent);
     }
 }

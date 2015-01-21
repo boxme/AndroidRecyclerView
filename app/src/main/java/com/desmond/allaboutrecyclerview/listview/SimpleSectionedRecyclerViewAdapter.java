@@ -35,6 +35,7 @@ public class SimpleSectionedRecyclerViewAdapter extends RecyclerView.Adapter<Rec
         mTextResourceId = textResourceId;
         mContext = context;
         mSections = new SparseArray<>();
+        mBaseAdapter = baseAdapter;
 
         // Register a data observer to be notified of data changes from within SimpleSectionedRecyclerViewAdapter
         mBaseAdapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
@@ -68,7 +69,7 @@ public class SimpleSectionedRecyclerViewAdapter extends RecyclerView.Adapter<Rec
     public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup viewGroup, int viewType) {
         if (viewType == SECTION_TYPE) {
             final View view = LayoutInflater.from(mContext).inflate(mSectionResourceId, viewGroup, false);
-            return new SectionViewHolder(view,mTextResourceId);
+            return new SectionViewHolder(view, mTextResourceId);
         }
         else {
             return mBaseAdapter.onCreateViewHolder(viewGroup, viewType -1);
@@ -95,6 +96,14 @@ public class SimpleSectionedRecyclerViewAdapter extends RecyclerView.Adapter<Rec
                         0 : (lhs.firstPosition < rhs.firstPosition ? -1 : 1);
             }
         });
+
+        int offset = 0; // Offset positions for the headers we're adding
+        for (Section section : sections) {
+            section.sectionedPosition = section.firstPosition + offset;
+            mSections.append(section.sectionedPosition, section);
+            ++offset;
+        }
+        notifyDataSetChanged();
     }
 
     public int positionToSectionedPosition(int position) {
