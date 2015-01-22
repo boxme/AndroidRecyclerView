@@ -54,6 +54,10 @@ public class ListLayoutFragment extends Fragment {
 
         SimpleAdapter recyclerViewAdapter = new SimpleAdapter(getActivity(), data);
 
+        SimpleSectionedRecyclerViewAdapter sectionedAdapter =
+                new SimpleSectionedRecyclerViewAdapter(
+                        getActivity(), R.layout.section, R.id.section_text, recyclerViewAdapter);
+
         // This is the code to provide a sectioned list
         List<SimpleSectionedRecyclerViewAdapter.Section> sections = new ArrayList<>();
 
@@ -65,12 +69,9 @@ public class ListLayoutFragment extends Fragment {
         sections.add(new SimpleSectionedRecyclerViewAdapter.Section(20,"Section 5"));
 
         // Add your adapter to the sectionAdapter
-        SimpleSectionedRecyclerViewAdapter.Section[] dummy =
+        SimpleSectionedRecyclerViewAdapter.Section[] sectionArray =
                 new SimpleSectionedRecyclerViewAdapter.Section[sections.size()];
-        SimpleSectionedRecyclerViewAdapter sectionedAdapter =
-                new SimpleSectionedRecyclerViewAdapter(
-                        getActivity(), R.layout.section, R.id.section_text, recyclerViewAdapter);
-        sectionedAdapter.setSections(sections.toArray(dummy));
+        sectionedAdapter.setSections(sections.toArray(sectionArray));
 
         // Apply this adapter to the RecyclerView
         recyclerView.setAdapter(sectionedAdapter);

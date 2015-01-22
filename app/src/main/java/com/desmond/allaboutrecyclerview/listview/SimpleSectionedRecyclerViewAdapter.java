@@ -23,14 +23,12 @@ public class SimpleSectionedRecyclerViewAdapter extends RecyclerView.Adapter<Rec
     private boolean mValid = true;
     private int mSectionResourceId;
     private int mTextResourceId;
-    private LayoutInflater mLayoutInflater;
     private RecyclerView.Adapter mBaseAdapter;
     private SparseArray<Section> mSections;
 
     public SimpleSectionedRecyclerViewAdapter(Context context, int sectionResourceId,
                                               int textResourceId, RecyclerView.Adapter baseAdapter) {
         super();
-        mLayoutInflater = LayoutInflater.from(context);
         mSectionResourceId = sectionResourceId;
         mTextResourceId = textResourceId;
         mContext = context;
@@ -72,7 +70,7 @@ public class SimpleSectionedRecyclerViewAdapter extends RecyclerView.Adapter<Rec
             return new SectionViewHolder(view, mTextResourceId);
         }
         else {
-            return mBaseAdapter.onCreateViewHolder(viewGroup, viewType -1);
+            return mBaseAdapter.onCreateViewHolder(viewGroup, viewType - 1);
         }
     }
 
@@ -123,7 +121,7 @@ public class SimpleSectionedRecyclerViewAdapter extends RecyclerView.Adapter<Rec
 
         int offset = 0;
         for (int i = 0; i < mSections.size(); i++) {
-            if (mSections.valueAt(i).firstPosition > sectionedPosition) {break;}
+            if (mSections.valueAt(i).sectionedPosition > sectionedPosition) {break;}
             --offset;
         }
 
