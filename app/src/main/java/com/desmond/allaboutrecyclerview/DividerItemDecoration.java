@@ -51,9 +51,16 @@ public class DividerItemDecoration extends RecyclerView.ItemDecoration {
         mShowLastDivider = showLastDivider;
     }
 
+    /**
+     * Retrieve any offsets for the given item. Each field of outRect specifies the number of pixels
+     * that the item view should be inset by, similar to padding or margin.
+     * The default implementation sets the bounds of outRect to 0 and returns.
+     *
+     * If this ItemDecoration does not affect the positioning of item views it should set
+     * all four fields of outRect (left, top, right, bottom) to zero before returning.
+     */
     @Override
-    public void getItemOffsets(Rect outRect, View view, RecyclerView parent,
-                               RecyclerView.State state) {
+    public void getItemOffsets(Rect outRect, View view, RecyclerView parent, RecyclerView.State state) {
         super.getItemOffsets(outRect, view, parent, state);
         if (mDivider == null) {return;}
 
@@ -67,6 +74,11 @@ public class DividerItemDecoration extends RecyclerView.ItemDecoration {
         }
     }
 
+    /**
+     * Draw any appropriate decorations into the Canvas supplied to the RecyclerView.
+     * Any content drawn by this method will be drawn after the item views are drawn
+     * and will thus appear over the views.
+     */
     @Override
     public void onDrawOver(Canvas c, RecyclerView parent, RecyclerView.State state) {
         if (mDivider == null) {

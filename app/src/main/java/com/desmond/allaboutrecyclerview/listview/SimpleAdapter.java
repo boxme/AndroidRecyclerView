@@ -15,7 +15,11 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Created by desmond on 20/1/15.
+ * This is the default adapter to use to show the items in the
+ * RecyclerView without any sections
+ *
+ * SimpleSectionedRecyclerViewAdapter will encapsulate this adapter to show
+ * the sections
  */
 public class SimpleAdapter extends RecyclerView.Adapter<SimpleAdapter.SimpleViewHolder> {
 
