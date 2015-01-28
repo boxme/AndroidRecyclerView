@@ -44,6 +44,13 @@ public class MainActivity extends ActionBarActivity {
 
     public void showGridView(View view) {
         Intent showGridViewIntent = new Intent(this, GridLayoutActivity.class);
+        showGridViewIntent.putExtra(GridLayoutActivity.SECTIONED, false);
+        startActivity(showGridViewIntent);
+    }
+
+    public void showSectionedGridView(View view) {
+        Intent showGridViewIntent = new Intent(this, GridLayoutActivity.class);
+        showGridViewIntent.putExtra(GridLayoutActivity.SECTIONED, true);
         startActivity(showGridViewIntent);
     }
 

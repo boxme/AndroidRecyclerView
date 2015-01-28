@@ -65,8 +65,7 @@ public class GridLayoutFragment extends Fragment {
         headerView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(v.getContext(), "HeaderView Clicked",
-                        Toast.LENGTH_SHORT).show();
+                Toast.makeText(v.getContext(), "HeaderView Clicked", Toast.LENGTH_SHORT).show();
             }
         });
 

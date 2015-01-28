@@ -29,12 +29,13 @@ public class SectionedGridRecyclerViewAdapter extends RecyclerView.Adapter<Recyc
     private SparseArray<Section> mSections = new SparseArray<>();
     private RecyclerView mRecyclerView;
 
-    public  SectionedGridRecyclerViewAdapter(Context context, int sectionResourceId,
+    public  SectionedGridRecyclerViewAdapter(Context context, RecyclerView recyclerView, int sectionResourceId,
                                              int textResourceId, RecyclerView.Adapter baseAdapter) {
         mContext = context;
         mSectionResourceId = sectionResourceId;
         mTextResourceId = textResourceId;
         mBaseAdapter = baseAdapter;
+        mRecyclerView = recyclerView;
 
         mBaseAdapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
             @Override
@@ -180,9 +181,9 @@ public class SectionedGridRecyclerViewAdapter extends RecyclerView.Adapter<Recyc
     public static class SectionViewHolder extends RecyclerView.ViewHolder {
         public TextView title;
 
-        public SectionViewHolder(View view, int mTextResourceId) {
+        public SectionViewHolder(View view, int textResourceId) {
             super(view);
-            title = (TextView) view.findViewById(R.id.text);
+            title = (TextView) view.findViewById(textResourceId);
         }
     }
 }
