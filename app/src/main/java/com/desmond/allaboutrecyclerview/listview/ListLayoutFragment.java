@@ -10,11 +10,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.desmond.allaboutrecyclerview.DividerItemDecoration;
+import com.desmond.allaboutrecyclerview.decoration.DividerItemDecoration;
 import com.desmond.allaboutrecyclerview.R;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**

@@ -1,4 +1,4 @@
-package com.desmond.allaboutrecyclerview;
+package com.desmond.allaboutrecyclerview.decoration;
 
 import android.content.Context;
 import android.content.res.TypedArray;
