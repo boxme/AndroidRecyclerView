@@ -1,6 +1,8 @@
 package com.desmond.allaboutrecyclerview.customLayoutManager;
 
+import android.content.Context;
 import android.support.v7.widget.RecyclerView;
+import android.util.AttributeSet;
 import android.util.SparseArray;
 import android.util.SparseIntArray;
 import android.view.View;
@@ -125,6 +127,85 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         fillGrid(DIRECTION_DOWN, childLeft, childTop, recycler, state.isPreLayout(), removeCache);
     }
 
+    @Override
+    public boolean canScrollHorizontally() {
+        return true;
+    }
+
+    @Override
+    public boolean canScrollVertically() {
+        return true;
+    }
+
+    /**
+     * This method describes how far RecyclerView thinks that the contents should be scrolled
+     * horizontally. You're responsible for verifying edge boundaries, and determining if this
+     * scroll event somehow requires that new views be added or old views get recycled
+     */
+    @Override
+    public int scrollHorizontallyBy(int dx, RecyclerView.Recycler recycler, RecyclerView.State state) {
+        if (getChildCount() == 0) return 0;
+
+        // Take leftmost measurements from the top-left child
+        final View topView = getChildAt(0);
+        // Take rightmost measurements from the top-right child
+        final View bottomView = getChildAt(mVisibleColumnCount - 1);
+
+        // Optimize the case where the entire data set is too small to scroll
+        int viewSpan = getDecoratedRight(bottomView) - getDecoratedLeft(topView);
+        if (viewSpan < getHorizontalSpace()) return 0;
+
+        int delta;
+        boolean leftBoundReached = getFirstVisibleColumn() == 0;
+        boolean rightBoundReached = getLastVisibleColumn() >= getTotalColumnCount();
+
+        if (dx > 0) { // Scroll right
+            if (rightBoundReached) {
+                // Reached the last column, enforce limits
+                int rightOffset = getHorizontalSpace() - getDecoratedRight(bottomView) + getPaddingRight();
+                delta = Math.max(-dx, rightOffset);
+            } else {
+                // No limits while the last column isn't visible
+                delta = -dx;
+            }
+        } else { // Scroll left
+            if (leftBoundReached) {
+                int leftOffset = -getDecoratedLeft(topView) + getPaddingLeft();
+                delta = Math.min(-dx, leftOffset);
+            } else {
+                delta = -dx;
+            }
+        }
+
+        offsetChildrenHorizontal(delta);
+
+        if (dx > 0) {
+            if (getDecoratedRight(topView) < 0 && !rightBoundReached) {
+                fillGrid(DIRECTION_END, recycler);
+            } else if (!rightBoundReached) {
+                fillGrid(DIRECTION_NONE, recycler);
+            }
+        } else {
+            if (getDecoratedLeft(topView) > 0 && !leftBoundReached) {
+                fillGrid(DIRECTION_START, recycler);
+            } else if (!leftBoundReached) {
+                fillGrid(DIRECTION_NONE, recycler);
+            }
+        }
+
+        /*
+         * Return value determines if a boundary has been reached
+         * (for edge effects and flings). If returned value doesn't
+         * match original delta (dx), RecyclerView will draw an edge effect
+         */
+        return -delta;
+    }
+
+    @Override
+    public int scrollVerticallyBy(int dy, RecyclerView.Recycler recycler, RecyclerView.State state) {
+        return super.scrollVerticallyBy(dy, recycler, state);
+    }
+
     /**
      * Even without extending LayoutParams, we must override this method
      * to provide the default layout parameters that each child view
@@ -136,7 +217,7 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
      */
     @Override
     public RecyclerView.LayoutParams generateDefaultLayoutParams() {
-        return new RecyclerView.LayoutParams(
+        return new LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT);
     }
@@ -185,8 +266,167 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         int startLeftOffset = getPaddingLeft() + emptyLeft;
         int startTopOffset = getPaddingTop() + emptyTop;
         if (getChildCount() != 0) {
-            // TODO
+            final View topView = getChildAt(0);
+            startLeftOffset = getDecoratedLeft(topView);
+            startTopOffset = getDecoratedTop(topView);
+
+            switch (direction) {
+                case DIRECTION_START:
+                    startLeftOffset -= mDecoratedChildWidth;
+                    break;
+                case DIRECTION_END:
+                    startLeftOffset += mDecoratedChildWidth;
+                    break;
+                case DIRECTION_UP:
+                    startTopOffset -= mDecoratedChildHeight;
+                    break;
+                case DIRECTION_DOWN:
+                    startTopOffset += mDecoratedChildWidth;
+                    break;
+            }
+
+            // Cache all views by their existing position, before updating counts
+            for (int i = 0; i < getChildCount(); i++) {
+                int position = positionOfIndex(i);
+                final View child = getChildAt(i);
+                viewCache.put(position, child);
+            }
+
+            // Temporarily detach all views
+            // Views we still need will be added back at the proper index
+            for (int i = 0; i < viewCache.size(); i++) {
+                detachView(viewCache.valueAt(i));
+            }
         }
+
+        /*
+         * Next, advance the visible position based on the fill direction
+         * DIRECTION_NONE doesn't advance the position in any direction
+         */
+        switch (direction) {
+            case DIRECTION_START:
+                mFirstVisiblePosition--;
+                break;
+            case DIRECTION_END:
+                mFirstVisiblePosition++;
+                break;
+            case DIRECTION_UP:
+                mFirstVisiblePosition -= getTotalColumnCount();
+                break;
+            case DIRECTION_DOWN:
+                mFirstVisiblePosition += getTotalColumnCount()  ;
+                break;
+        }
+
+        /*
+         * Supply the grid of items that are deemed visible.
+         * If these items were previously there, they will simply be
+         * re-attached. New views that must be created are obtained
+         * from the Recycler & added
+         */
+        int leftOffset = startLeftOffset;
+        int topOffset = startTopOffset;
+
+        for (int i = 0; i < getVisibleChildCount(); i++) {
+            int nextPosition = positionOfIndex(i);
+
+            /*
+             * When a removal happens out of bounds, the pre-layout positions of items
+             * after the removal are shifted to their final position ahead of schedule.
+             * We have to track off-screen removals & shift those positions back so we
+             * can properly lay out all current (& appearing) views in their initial locations
+             */
+            int offsetPositionDelta = 0;
+            if (preLayout) {
+                int offsetPosition = nextPosition;
+
+                for (int offset = 0; offset < removedPositions.size(); offset++) {
+                    // Look for off-screen removals that are less-than this
+                    if (removedPositions.valueAt(offset) == REMOVE_INVISIBLE
+                            && removedPositions.keyAt(offset) < nextPosition) {
+                        // Offset position to match
+                        offsetPosition--;
+                    }
+                }
+                offsetPositionDelta = nextPosition - offsetPosition;
+                nextPosition = offsetPosition;
+            }
+
+            if (nextPosition < 0 || nextPosition >= getItemCount()) {
+                // Item space beyond the data set, don't attempt to add a view
+                continue;
+            }
+
+            // Layout this position
+            View view = viewCache.get(nextPosition);
+            if (view == null) {
+                /*
+                 * The Recycler will give us either a newly constructed view, or
+                 * a recycled view it has on-hand. In either case, the view will
+                 * already be fully bounded to the data by the adapter
+                 */
+                view = recycler.getViewForPosition(nextPosition);
+                addView(view);
+
+                /*
+                 * Update the new view's metadata, but only when this is a real
+                 * layout pass
+                 */
+                if (!preLayout) {
+                    LayoutParams lp = (LayoutParams) view.getLayoutParams();
+                    lp.row = getGlobalRowOfPosition(nextPosition);
+                    lp.column = getGlobalColumnOfPosition(nextPosition);
+                }
+
+                /*
+                 * It is prudent to measure/layout each new view we
+                 * receive from the Recycler. We don't have to do
+                 * this for views we are just re-arranging.
+                 */
+                measureChildWithMargins(view, 0, 0);
+                layoutDecorated(view, leftOffset, topOffset,
+                        leftOffset + mDecoratedChildWidth,
+                        topOffset + mDecoratedChildHeight);
+            } else {
+                // Re-attach the cached view at its new index
+                attachView(view);
+                viewCache.remove(nextPosition);
+            }
+
+            // At each column end
+            if (i % mVisibleColumnCount == (mVisibleColumnCount - 1)) {
+                leftOffset = startLeftOffset;
+                topOffset += mDecoratedChildHeight;
+
+                // During pre-layout, on each column end, apply any additional appearing views
+                if (preLayout) {
+                    layoutAppearingViews(recycler, view, nextPosition, removedPositions.size(), offsetPositionDelta);
+                }
+            } else {
+                leftOffset += mDecoratedChildWidth;
+            }
+        }
+
+        /*
+         * Finally, we ask the Recycler to scrap and store any views
+         * that we did not re-attach. These are views that are not currently
+         * necessary because they are no longer visible.
+         */
+        for (int i = 0; i < viewCache.size(); i++) {
+            final View removingView = viewCache.valueAt(i);
+            recycler.recycleView(removingView);
+        }
+    }
+
+    /**
+     * Mapping between child views indices and adapter data
+     * positions helps fill the proper views during scrolling
+     */
+    private int positionOfIndex(int childIndex) {
+        int row = childIndex / mVisibleColumnCount;
+        int column = childIndex % mVisibleColumnCount;
+
+        return mFirstVisiblePosition + (row * getTotalColumnCount()) + column;
     }
 
     private int getHorizontalSpace() {
@@ -237,5 +477,111 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         }
 
         return maxRow;
+    }
+
+    /**
+     * Return the overall column index of this position in the global layout
+     **/
+    private int getGlobalColumnOfPosition(int position) {
+        return position % mTotalColumnCount;
+    }
+
+    /**
+     *  Return the overall row index of this position in the global layout
+     **/
+    private int getGlobalRowOfPosition(int position) {
+        return position / mTotalColumnCount;
+    }
+
+    /** Animation Layout Helpers */
+
+    /**
+     *  Helper to obtain and place extra appearing views */
+    private void layoutAppearingViews(RecyclerView.Recycler recycler, View referenceView,
+                                      int referencePosition, int extraCount, int offset) {
+        // Nothing to do...
+        if (extraCount < 1) return;
+
+        for (int extra = 1; extra <= extraCount; extra++) {
+            //Grab the next position after the reference
+            final int extraPosition = referencePosition + extra;
+            if (extraPosition < 0 || extraPosition >= getItemCount()) {
+                //Can't do anything with this
+                continue;
+            }
+
+            /*
+             * Obtain additional position views that we expect to appear
+             * as part of the animation.
+             */
+            View appearing = recycler.getViewForPosition(extraPosition);
+            addView(appearing);
+
+            // Find layout delta from reference position
+            final int newRow = getGlobalRowOfPosition(extraPosition + offset);
+            final int rowDelta = newRow - getGlobalRowOfPosition(referencePosition + offset);
+            final int newCol = getGlobalColumnOfPosition(extraPosition + offset);
+            final int colDelta = newCol - getGlobalColumnOfPosition(referencePosition + offset);
+
+            layoutTempChildView(appearing, rowDelta, colDelta, referenceView);
+        }
+    }
+
+    /**
+     * Helper to place a disappearing view */
+    private void layoutDisappearingView(View disappearingChild) {
+        /*
+         * LayoutManager has a special method for attaching views that
+         * will only be around long enough to animate.
+         */
+        addDisappearingView(disappearingChild);
+
+        // Adjust each disappearing view to its proper place
+        final LayoutParams lp = (LayoutParams) disappearingChild.getLayoutParams();
+
+        final int newRow = getGlobalRowOfPosition(lp.getViewPosition());
+        final int rowDelta = newRow - lp.row;
+        final int newCol = getGlobalColumnOfPosition(lp.getViewPosition());
+        final int colDelta = newCol - lp.column;
+
+        layoutTempChildView(disappearingChild, rowDelta, colDelta, disappearingChild);
+    }
+
+    /**
+     * Helper to lay out appearing/disappearing children */
+    private void layoutTempChildView(View child, int rowDelta, int colDelta, View referenceView) {
+        //Set the layout position to the global row/column difference from the reference view
+        int layoutTop = getDecoratedTop(referenceView) + rowDelta * mDecoratedChildHeight;
+        int layoutLeft = getDecoratedLeft(referenceView) + colDelta * mDecoratedChildWidth;
+
+        measureChildWithMargins(child, 0, 0);
+        layoutDecorated(child, layoutLeft, layoutTop,
+                layoutLeft + mDecoratedChildWidth,
+                layoutTop + mDecoratedChildHeight);
+    }
+
+    public static class LayoutParams extends RecyclerView.LayoutParams {
+
+        //Current row in the grid
+        public int row;
+
+        //Current column in the grid
+        public int column;
+
+        public LayoutParams(Context c, AttributeSet attrs) {
+            super(c, attrs);
+        }
+        public LayoutParams(int width, int height) {
+            super(width, height);
+        }
+        public LayoutParams(ViewGroup.MarginLayoutParams source) {
+            super(source);
+        }
+        public LayoutParams(ViewGroup.LayoutParams source) {
+            super(source);
+        }
+        public LayoutParams(RecyclerView.LayoutParams source) {
+            super(source);
+        }
     }
 }
