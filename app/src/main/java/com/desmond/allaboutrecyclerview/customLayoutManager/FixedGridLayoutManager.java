@@ -3,6 +3,7 @@ package com.desmond.allaboutrecyclerview.customLayoutManager;
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.util.SparseArray;
 import android.util.SparseIntArray;
 import android.view.View;
@@ -125,85 +126,6 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
 
         // Fill the grid for the initial layout of views
         fillGrid(DIRECTION_DOWN, childLeft, childTop, recycler, state.isPreLayout(), removeCache);
-    }
-
-    @Override
-    public boolean canScrollHorizontally() {
-        return true;
-    }
-
-    @Override
-    public boolean canScrollVertically() {
-        return true;
-    }
-
-    /**
-     * This method describes how far RecyclerView thinks that the contents should be scrolled
-     * horizontally. You're responsible for verifying edge boundaries, and determining if this
-     * scroll event somehow requires that new views be added or old views get recycled
-     */
-    @Override
-    public int scrollHorizontallyBy(int dx, RecyclerView.Recycler recycler, RecyclerView.State state) {
-        if (getChildCount() == 0) return 0;
-
-        // Take leftmost measurements from the top-left child
-        final View topView = getChildAt(0);
-        // Take rightmost measurements from the top-right child
-        final View bottomView = getChildAt(mVisibleColumnCount - 1);
-
-        // Optimize the case where the entire data set is too small to scroll
-        int viewSpan = getDecoratedRight(bottomView) - getDecoratedLeft(topView);
-        if (viewSpan < getHorizontalSpace()) return 0;
-
-        int delta;
-        boolean leftBoundReached = getFirstVisibleColumn() == 0;
-        boolean rightBoundReached = getLastVisibleColumn() >= getTotalColumnCount();
-
-        if (dx > 0) { // Scroll right
-            if (rightBoundReached) {
-                // Reached the last column, enforce limits
-                int rightOffset = getHorizontalSpace() - getDecoratedRight(bottomView) + getPaddingRight();
-                delta = Math.max(-dx, rightOffset);
-            } else {
-                // No limits while the last column isn't visible
-                delta = -dx;
-            }
-        } else { // Scroll left
-            if (leftBoundReached) {
-                int leftOffset = -getDecoratedLeft(topView) + getPaddingLeft();
-                delta = Math.min(-dx, leftOffset);
-            } else {
-                delta = -dx;
-            }
-        }
-
-        offsetChildrenHorizontal(delta);
-
-        if (dx > 0) {
-            if (getDecoratedRight(topView) < 0 && !rightBoundReached) {
-                fillGrid(DIRECTION_END, recycler);
-            } else if (!rightBoundReached) {
-                fillGrid(DIRECTION_NONE, recycler);
-            }
-        } else {
-            if (getDecoratedLeft(topView) > 0 && !leftBoundReached) {
-                fillGrid(DIRECTION_START, recycler);
-            } else if (!leftBoundReached) {
-                fillGrid(DIRECTION_NONE, recycler);
-            }
-        }
-
-        /*
-         * Return value determines if a boundary has been reached
-         * (for edge effects and flings). If returned value doesn't
-         * match original delta (dx), RecyclerView will draw an edge effect
-         */
-        return -delta;
-    }
-
-    @Override
-    public int scrollVerticallyBy(int dy, RecyclerView.Recycler recycler, RecyclerView.State state) {
-        return super.scrollVerticallyBy(dy, recycler, state);
     }
 
     /**
@@ -419,6 +341,211 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
     }
 
     /**
+     * You must override this method if you would like to support external calls
+     * to shift the view to a given adapter position. In our implementation, this
+     * is the same as doing a fresh layout with the given position as the top-left
+     * (or first visible), so we simply set that value and trigger onLayoutChildren()
+     */
+    @Override
+    public void scrollToPosition(int position) {
+        if (position >= getItemCount()) {
+            Log.e(TAG, "Cannot scroll to " + position + ", item count is " + getItemCount());
+            return;
+        }
+
+        // Ignore current scroll offset, snap to top-left
+        mForceClearOffsets = true;
+        // Set requested position as first visible
+        mFirstVisiblePosition = position;
+        // Trigger a new view layout
+        requestLayout();
+    }
+
+    /*
+     * You must override this method if you would like to support external calls
+     * to animate a change to a new adapter position. The framework provides a
+     * helper scroller implementation (LinearSmoothScroller), which we leverage
+     * to do the animation calculations.
+     */
+    @Override
+    public void smoothScrollToPosition(RecyclerView recyclerView, RecyclerView.State state, final int position) {
+        // TODO
+    }
+
+    @Override
+    public boolean canScrollHorizontally() {
+        return true;
+    }
+
+    @Override
+    public boolean canScrollVertically() {
+        return true;
+    }
+
+    /**
+     * This method describes how far RecyclerView thinks that the contents should be scrolled
+     * horizontally. You're responsible for verifying edge boundaries, and determining if this
+     * scroll event somehow requires that new views be added or old views get recycled
+     *
+     * @return if value doesn't exactly match the dx passed in, expect some amount of edge glow to be drawn
+     */
+    @Override
+    public int scrollHorizontallyBy(int dx, RecyclerView.Recycler recycler, RecyclerView.State state) {
+        if (getChildCount() == 0) return 0;
+
+        // Take leftmost measurements from the top-left child
+        final View topView = getChildAt(0);
+        // Take rightmost measurements from the top-right child
+        final View bottomView = getChildAt(mVisibleColumnCount - 1);
+
+        // Optimize the case where the entire data set is too small to scroll
+        int viewSpan = getDecoratedRight(bottomView) - getDecoratedLeft(topView);
+        if (viewSpan < getHorizontalSpace()) return 0;
+
+        int delta;
+        boolean leftBoundReached = getFirstVisibleColumn() == 0;
+        boolean rightBoundReached = getLastVisibleColumn() >= getTotalColumnCount();
+
+        if (dx > 0) { // Scroll right
+            if (rightBoundReached) {
+                /* Reached the last column, enforce limits
+                 * rightOffset should be 0 when the last col is fully visible
+                 * else, negative value
+                 */
+                int rightOffset = getHorizontalSpace() - getDecoratedRight(bottomView) + getPaddingRight();
+                delta = Math.max(-dx, rightOffset);
+            } else {
+                // No limits while the last column isn't visible
+                delta = -dx;
+            }
+        } else { // Scroll left
+            if (leftBoundReached) {
+                int leftOffset = -getDecoratedLeft(topView) + getPaddingLeft();
+                delta = Math.min(-dx, leftOffset);
+            } else {
+                delta = -dx;
+            }
+        }
+
+        // Manually move the views
+        offsetChildrenHorizontal(delta);
+
+        // Trigger another fill operation to swap views based on the direction scrolled.
+        if (dx > 0) {
+            if (getDecoratedRight(topView) < 0 && !rightBoundReached) {
+                fillGrid(DIRECTION_END, recycler);
+            } else if (!rightBoundReached) {
+                fillGrid(DIRECTION_NONE, recycler);
+            }
+        } else {
+            if (getDecoratedLeft(topView) > 0 && !leftBoundReached) {
+                fillGrid(DIRECTION_START, recycler);
+            } else if (!leftBoundReached) {
+                fillGrid(DIRECTION_NONE, recycler);
+            }
+        }
+
+        /*
+         * Return value determines if a boundary has been reached
+         * (for edge effects and flings). If returned value doesn't
+         * match original delta (dx), RecyclerView will draw an edge effect
+         */
+        return -delta;
+    }
+
+    /**
+     * This method describes how far RecyclerView thinks that the contents should be scrolled
+     * vertically.
+     *
+     * @return if value doesn't exactly match the dy passed in, expect some amount of edge glow to be drawn
+     */
+    @Override
+    public int scrollVerticallyBy(int dy, RecyclerView.Recycler recycler, RecyclerView.State state) {
+        if (getChildCount() == 0) return 0;
+
+        // Take top measurements from the top-left child
+        final View topView = getChildAt(0);
+        // Take bottom measurements from the bottom-right child
+        final View bottomView = getChildAt(getChildCount() - 1);
+
+        // Optimize the case where the entire data set is too small to scroll
+        int viewSpan = getDecoratedBottom(bottomView) - getDecoratedTop(topView);
+        if (viewSpan < getVerticalSpace()) {
+            // We cannot scroll in either direction
+            return 0;
+        }
+
+        int delta;
+        int maxRowCount = getTotalRowCount();
+        boolean topBoundReached = getFirstVisibleRow() == 0;
+        boolean bottomBoundReached = getLastVisibleRow() >= maxRowCount;
+
+        if (dy > 0) { // Scroll down
+
+            if (bottomBoundReached) {
+                int bottomOffset;
+
+                // Reached the last row, enforce limits
+                if (rowOfIndex(getChildCount() - 1) >= (maxRowCount - 1)) {
+                    // Truly at the bottom, determine how far
+                    // bottomOffset should be 0 when the last row is fully visible
+                    bottomOffset = getVerticalSpace() - getDecoratedBottom(bottomView)
+                            + getPaddingBottom();
+                } else {
+                    /*
+                     * Extra space added to account for allowing bottom space in the grid.
+                     * This occurs when the overlap in the last row is not large enough to
+                     * ensure that at least one element in that row isn't fully recycled.
+                     */
+                    bottomOffset = getVerticalSpace() - (getDecoratedBottom(bottomView)
+                            + mDecoratedChildHeight) + getPaddingBottom();
+                }
+
+                delta = Math.max(-dy, bottomOffset);
+            } else {
+                // No limits while the last row isn't visible
+                delta = -dy;
+            }
+        } else { // Scroll up
+            if (topBoundReached) {
+                int topOffset = -getDecoratedTop(topView) + getPaddingTop();
+                delta = Math.min(-dy, topOffset);
+            } else {
+                delta = -dy;
+            }
+        }
+
+        // Manually move the views
+        offsetChildrenVertical(delta);
+
+        // Trigger another fill operation to swap views based on the direction scrolled.
+        if (dy > 0) {
+            if (getDecoratedBottom(topView) < 0 && !bottomBoundReached) {
+                // Continue to scroll down
+                fillGrid(DIRECTION_DOWN, recycler);
+            } else if (!bottomBoundReached) {
+                // No more scrolling
+                fillGrid(DIRECTION_NONE, recycler);
+            }
+        } else {
+            if (getDecoratedTop(topView) > 0 && !topBoundReached) {
+                // Continue to scroll up
+                fillGrid(DIRECTION_UP, recycler);
+            } else if (!topBoundReached) {
+                fillGrid(DIRECTION_NONE, recycler);
+            }
+        }
+
+        /*
+         * Return value determines if a boundary has been reached
+         * (for edge effects and flings). If returned value does not
+         * match original delta (passed in), RecyclerView will draw
+         * an edge effect.
+         */
+        return -delta;
+    }
+
+    /**
      * Mapping between child views indices and adapter data
      * positions helps fill the proper views during scrolling
      */
@@ -427,6 +554,12 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         int column = childIndex % mVisibleColumnCount;
 
         return mFirstVisiblePosition + (row * getTotalColumnCount()) + column;
+    }
+
+    private int rowOfIndex(int childIndex) {
+        int position = positionOfIndex(childIndex);
+
+        return position / getTotalColumnCount();
     }
 
     private int getHorizontalSpace() {
