@@ -1,6 +1,8 @@
 package com.desmond.allaboutrecyclerview.customLayoutManager;
 
 import android.content.Context;
+import android.graphics.PointF;
+import android.support.v7.widget.LinearSmoothScroller;
 import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -29,7 +31,7 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
     private static final int DIRECTION_UP = 2;
     private static final int DIRECTION_DOWN = 3;
 
-    /* First (top-left) position visible at any point */
+    /* First (top-left) global position visible at any point */
     private int mFirstVisiblePosition;
 
     /* Consistent size applied to all child views */
@@ -134,7 +136,7 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
             mFirstVisiblePosition = 0;
             childLeft = childTop = 0;
         } else if (!state.isPreLayout() && getVisibleChildCount() >= getItemCount()) {
-            // Data set is too small to scroll fully, just reset position
+            // Data set is too small to be scrolled fully, just reset position
             mFirstVisiblePosition = 0;
             childLeft = childTop = 0;
         } else {
@@ -154,14 +156,14 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
             }
 
             /*
-             * When data set is too small to scroll vertically, adjust vertical offset
+             * When the new data set is too small to scroll vertically, adjust vertical offset
              * and shift position to the first row, preserving current column
              */
             if (!state.isPreLayout() && getVerticalSpace() > (getTotalRowCount() * mDecoratedChildHeight)) {
                 mFirstVisiblePosition = mFirstVisiblePosition % getTotalColumnCount();
                 childTop = 0;
 
-                // If the shift overscrolls the column max, back it off
+                // If the shift over-scrolls the column max, back it off
                 if (mFirstVisiblePosition + mVisibleColumnCount > getItemCount()) {
                     mFirstVisiblePosition = Math.max(getItemCount() - mVisibleColumnCount, 0);
                     childLeft = 0;
@@ -178,6 +180,7 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
             int maxFirstCol = getTotalColumnCount() - (mVisibleColumnCount - 1);
             boolean isOutOfRowBounds = getFirstVisibleRow() > maxFirstRow;
             boolean isOutOfColBounds = getFirstVisibleColumn() > maxFirstCol;
+
             if (isOutOfColBounds || isOutOfRowBounds) {
                 int firstRow;
                 if (isOutOfRowBounds) firstRow = maxFirstRow;
@@ -459,7 +462,7 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         requestLayout();
     }
 
-    /*
+    /**
      * You must override this method if you would like to support external calls
      * to animate a change to a new adapter position. The framework provides a
      * helper scroller implementation (LinearSmoothScroller), which we leverage
@@ -467,7 +470,35 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
      */
     @Override
     public void smoothScrollToPosition(RecyclerView recyclerView, RecyclerView.State state, final int position) {
-        // TODO
+        if (position >= getItemCount()) return;
+
+        /*
+         * LinearSmoothScroller's default behaviour is to scroll the contents until the child
+         * is fully visible. It will snap to the top-left or bottom-right of the parent
+         * depending on whether the direction of travel was positive or negative
+         */
+        LinearSmoothScroller scroller = new LinearSmoothScroller(recyclerView.getContext()) {
+
+            /*
+             * LinearSmoothScroller, at a min, just needs to know the vector
+             * (x/y distance) to travel in order to get from the current positioning
+             * to the target
+             */
+            @Override
+            public PointF computeScrollVectorForPosition(int targetPosition) {
+
+                // To return the initial direction of scroll and approximate distance it needs to
+                // travel to get from its current location to the target locationØ
+                final int rowOffset = getGlobalRowOfPosition(targetPosition)
+                        - getGlobalRowOfPosition(mFirstVisiblePosition);
+                final int colOffset = getGlobalColumnOfPosition(targetPosition)
+                        - getGlobalColumnOfPosition(mFirstVisiblePosition);
+
+                return new PointF(colOffset * mDecoratedChildWidth, rowOffset * mDecoratedChildHeight);
+            }
+        };
+        scroller.setTargetPosition(position);
+        startSmoothScroll(scroller);
     }
 
     @Override
