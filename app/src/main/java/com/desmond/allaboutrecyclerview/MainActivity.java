@@ -7,6 +7,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
+import com.desmond.allaboutrecyclerview.fixedTwoWayView.FixedTwoWayActivity;
 import com.desmond.allaboutrecyclerview.gridview.GridLayoutActivity;
 import com.desmond.allaboutrecyclerview.listview.ListLayoutActivity;
 
@@ -57,5 +58,10 @@ public class MainActivity extends ActionBarActivity {
     public void showListView(View view) {
         Intent showListViewIntent = new Intent(this, ListLayoutActivity.class);
         startActivity(showListViewIntent);
+    }
+
+    public void showTwoWayView(View view) {
+        Intent showTwoWayViewIntent = new Intent(this, FixedTwoWayActivity.class);
+        startActivity(showTwoWayViewIntent);
     }
 }

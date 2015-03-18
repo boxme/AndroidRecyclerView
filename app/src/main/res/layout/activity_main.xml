@@ -31,4 +31,13 @@
         android:textColor="@android:color/white"
         android:background="@drawable/light_blue_background"
         android:onClick="showListView"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Two Way View"
+        android:layout_marginTop="20dp"
+        android:textColor="@android:color/white"
+        android:background="@drawable/light_blue_background"
+        android:onClick="showTwoWayView"/>
 </LinearLayout>

@@ -24,6 +24,10 @@
             android:name=".listview.ListLayoutActivity"
             android:label="@string/title_activity_list_layout" >
         </activity>
+        <activity
+            android:name=".fixedTwoWayView.FixedTwoWayActivity"
+            android:label="@string/title_activity_fixed_two_way" >
+        </activity>
     </application>
 
 </manifest>

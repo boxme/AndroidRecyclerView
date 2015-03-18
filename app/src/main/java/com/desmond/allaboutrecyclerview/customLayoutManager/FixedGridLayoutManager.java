@@ -26,8 +26,8 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
 
     /* Fill Direction Constants */
     private static final int DIRECTION_NONE = -1;
-    private static final int DIRECTION_START = 0;
-    private static final int DIRECTION_END = 1;
+    private static final int DIRECTION_LEFT = 0;
+    private static final int DIRECTION_RIGHT = 1;
     private static final int DIRECTION_UP = 2;
     private static final int DIRECTION_DOWN = 3;
 
@@ -53,7 +53,8 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
     private int mChangedPositionCount;
 
     public void setTotalColumnCount(int count) {
-        // TODO
+        mTotalColumnCount = count;
+        requestLayout();
     }
 
     @Override
@@ -120,7 +121,7 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         // Always update the visible row/column counts
         updateWindowSizing();
 
-        SparseIntArray removeCache = null;
+        SparseIntArray removedCache = null;
         /*
          * During pre-layout, we need to take note of any views that are
          * being removed in order to handle predictive animations
@@ -156,14 +157,14 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
             }
 
             /*
-             * When the new data set is too small to scroll vertically, adjust vertical offset
+             * When the new data set is too small to be scrolled vertically, adjust vertical offset
              * and shift position to the first row, preserving current column
              */
             if (!state.isPreLayout() && getVerticalSpace() > (getTotalRowCount() * mDecoratedChildHeight)) {
                 mFirstVisiblePosition = mFirstVisiblePosition % getTotalColumnCount();
                 childTop = 0;
 
-                // If the shift over-scrolls the column max, back it off
+                // If the shift over-scrolled the column max, back it off
                 if (mFirstVisiblePosition + mVisibleColumnCount > getItemCount()) {
                     mFirstVisiblePosition = Math.max(getItemCount() - mVisibleColumnCount, 0);
                     childLeft = 0;
@@ -209,13 +210,15 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         detachAndScrapAttachedViews(recycler);
 
         // Fill the grid for the initial layout of views
-        fillGrid(DIRECTION_DOWN, childLeft, childTop, recycler, state.isPreLayout(), removeCache);
+        fillGrid(DIRECTION_NONE, childLeft, childTop, recycler, state.isPreLayout(), removedCache);
 
         // Evaluate any disappearing views that may exist
         if (!state.isPreLayout() && !recycler.getScrapList().isEmpty()) {
             // TODO
         }
     }
+
+
 
     /**
      * Swapping of the entire adapter, instead of changing the data in the adapter
@@ -226,22 +229,6 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
     public void onAdapterChanged(RecyclerView.Adapter oldAdapter, RecyclerView.Adapter newAdapter) {
         // Completely scrap the existing layout
         removeAllViews();
-    }
-
-    /**
-     * Even without extending LayoutParams, we must override this method
-     * to provide the default layout parameters that each child view
-     * will receive when added
-     *
-     * @return new instance of the RecyclerView.LayoutParams that you want applied by default
-     *         to all the child views returned from the Recycler.
-     *         These parameters will be applied to each child before they return from #getViewForPosition()
-     */
-    @Override
-    public RecyclerView.LayoutParams generateDefaultLayoutParams() {
-        return new LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT);
     }
 
     /**
@@ -274,6 +261,15 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         fillGrid(direction, 0, 0, recycler, false, null);
     }
 
+    /**
+     *
+     * @param direction Direction of fill
+     * @param emptyLeft Left of first visible child, without padding
+     * @param emptyTop  Top of first visible child, without padding
+     * @param recycler
+     * @param preLayout
+     * @param removedPositions
+     */
     private void fillGrid(int direction, int emptyLeft, int emptyTop, RecyclerView.Recycler recycler,
                           boolean preLayout, SparseIntArray removedPositions) {
         if (mFirstVisiblePosition < 0) mFirstVisiblePosition = 0;
@@ -287,58 +283,64 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         SparseArray<View> viewCache = new SparseArray<>(getChildCount());
         int startLeftOffset = getPaddingLeft() + emptyLeft;
         int startTopOffset = getPaddingTop() + emptyTop;
+
         if (getChildCount() != 0) {
             final View topView = getChildAt(0);
+            // Take into account decoration
             startLeftOffset = getDecoratedLeft(topView);
             startTopOffset = getDecoratedTop(topView);
 
             switch (direction) {
-                case DIRECTION_START:
+                case DIRECTION_LEFT:
                     startLeftOffset -= mDecoratedChildWidth;
                     break;
-                case DIRECTION_END:
+                case DIRECTION_RIGHT:
                     startLeftOffset += mDecoratedChildWidth;
                     break;
                 case DIRECTION_UP:
                     startTopOffset -= mDecoratedChildHeight;
                     break;
                 case DIRECTION_DOWN:
-                    startTopOffset += mDecoratedChildWidth;
+                    startTopOffset += mDecoratedChildHeight;
                     break;
             }
 
-            // Cache all views by their existing position, before updating counts
+            // Cache all current number of child views attached to the parent RecyclerView,
+            // by their existing position, before updating counts
             for (int i = 0; i < getChildCount(); i++) {
-                int position = positionOfIndex(i);
+                int positionOfChild = globalViewPositionOfIndex(i);
                 final View child = getChildAt(i);
-                viewCache.put(position, child);
+                viewCache.put(positionOfChild, child);
             }
 
-            // Temporarily detach all views
+            // Temporarily detach all current number of child views attached to the parent RecyclerView,
             // Views we still need will be added back at the proper index
             for (int i = 0; i < viewCache.size(); i++) {
+                // viewCache.valueAt() != viewCache.get()
                 detachView(viewCache.valueAt(i));
             }
         }
 
+        Log.d(TAG, "mFirstVisiblePosition " + mFirstVisiblePosition);
         /*
          * Next, advance the visible position based on the fill direction
          * DIRECTION_NONE doesn't advance the position in any direction
          */
         switch (direction) {
-            case DIRECTION_START:
+            case DIRECTION_LEFT:
                 mFirstVisiblePosition--;
                 break;
-            case DIRECTION_END:
+            case DIRECTION_RIGHT:
                 mFirstVisiblePosition++;
                 break;
             case DIRECTION_UP:
                 mFirstVisiblePosition -= getTotalColumnCount();
                 break;
             case DIRECTION_DOWN:
-                mFirstVisiblePosition += getTotalColumnCount()  ;
+                mFirstVisiblePosition += getTotalColumnCount();
                 break;
         }
+        Log.d(TAG, "mFirstVisiblePosition " + mFirstVisiblePosition);
 
         /*
          * Supply the grid of items that are deemed visible.
@@ -349,8 +351,10 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         int leftOffset = startLeftOffset;
         int topOffset = startTopOffset;
 
+        Log.d(TAG, "visible child count " + getVisibleChildCount());
         for (int i = 0; i < getVisibleChildCount(); i++) {
-            int nextPosition = positionOfIndex(i);
+            int nextPosition = globalViewPositionOfIndex(i);
+            Log.d(TAG, "nextPosition " + nextPosition);
 
             /*
              * When a removal happens out of bounds, the pre-layout positions of items
@@ -527,6 +531,8 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         // Take rightmost measurements from the top-right child
         final View bottomView = getChildAt(mVisibleColumnCount - 1);
 
+        Log.d(TAG, "visible column count " + mVisibleColumnCount);
+
         // Optimize the case where the entire data set is too small to scroll
         int viewSpan = getDecoratedRight(bottomView) - getDecoratedLeft(topView);
         if (viewSpan < getHorizontalSpace()) return 0;
@@ -562,13 +568,13 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         // Trigger another fill operation to swap views based on the direction scrolled.
         if (dx > 0) {
             if (getDecoratedRight(topView) < 0 && !rightBoundReached) {
-                fillGrid(DIRECTION_END, recycler);
+                fillGrid(DIRECTION_RIGHT, recycler);
             } else if (!rightBoundReached) {
                 fillGrid(DIRECTION_NONE, recycler);
             }
         } else {
             if (getDecoratedLeft(topView) > 0 && !leftBoundReached) {
-                fillGrid(DIRECTION_START, recycler);
+                fillGrid(DIRECTION_LEFT, recycler);
             } else if (!leftBoundReached) {
                 fillGrid(DIRECTION_NONE, recycler);
             }
@@ -675,10 +681,10 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
     }
 
     /**
-     * Mapping between child views indices and adapter data
+     * Mapping between child views global positions and adapter data
      * positions helps fill the proper views during scrolling
      */
-    private int positionOfIndex(int childIndex) {
+    private int globalViewPositionOfIndex(int childIndex) {
         int row = childIndex / mVisibleColumnCount;
         int column = childIndex % mVisibleColumnCount;
 
@@ -686,7 +692,7 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
     }
 
     private int rowOfIndex(int childIndex) {
-        int position = positionOfIndex(childIndex);
+        int position = globalViewPositionOfIndex(childIndex);
 
         return position / getTotalColumnCount();
     }
@@ -822,12 +828,45 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
                 layoutTop + mDecoratedChildHeight);
     }
 
+    /**
+     * Even without extending LayoutParams, we must override this method
+     * to provide the default layout parameters that each child view
+     * will receive when added
+     *
+     * @return new instance of the RecyclerView.LayoutParams that you want applied by default
+     *         to all the child views returned from the Recycler.
+     *         These parameters will be applied to each child before they return from #getViewForPosition()
+     */
+    @Override
+    public RecyclerView.LayoutParams generateDefaultLayoutParams() {
+        return new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+    }
+
+    @Override
+    public RecyclerView.LayoutParams generateLayoutParams(Context c, AttributeSet attrs) {
+        return new LayoutParams(c, attrs);
+    }
+
+    @Override
+    public RecyclerView.LayoutParams generateLayoutParams(ViewGroup.LayoutParams lp) {
+        if (lp instanceof ViewGroup.MarginLayoutParams) {
+            return new LayoutParams((ViewGroup.MarginLayoutParams) lp);
+        } else {
+            return new LayoutParams(lp);
+        }
+    }
+
+    @Override
+    public boolean checkLayoutParams(RecyclerView.LayoutParams lp) {
+        return lp instanceof LayoutParams;
+    }
+
     public static class LayoutParams extends RecyclerView.LayoutParams {
 
-        //Current row in the grid
+        // Current row in the grid
         public int row;
 
-        //Current column in the grid
+        // Current column in the grid
         public int column;
 
         public LayoutParams(Context c, AttributeSet attrs) {
