@@ -48,7 +48,7 @@ public class FixedTwoWayFragment extends Fragment {
         recyclerView.addItemDecoration(new InsertDecoration(getActivity()));
 
         mAdapter = new SimpleAdapter();
-        mAdapter.setItemCount(2);
+        mAdapter.setItemCount(12);
 
         recyclerView.setAdapter(mAdapter);
     }
