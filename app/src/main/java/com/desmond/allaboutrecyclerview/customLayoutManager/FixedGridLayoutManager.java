@@ -11,6 +11,9 @@ import android.util.SparseIntArray;
 import android.view.View;
 import android.view.ViewGroup;
 
+import java.util.HashSet;
+import java.util.List;
+
 /**
  * Created by desmond on 9/3/15.
  */
@@ -89,6 +92,27 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
     public void onItemsRemoved(RecyclerView recyclerView, int positionStart, int itemCount) {
         mFirstChangedPosition = positionStart;
         mChangedPositionCount = itemCount;
+    }
+
+    /**
+     * These methods are called before onLayoutChildren() in pre-layout if the views involved
+     * are not visible. Use these methods to keep track of the variables require
+     *
+     * These methods are still called if the views involved are visible, but AFTER pre-layout
+     */
+    @Override
+    public void onItemsMoved(RecyclerView recyclerView, int from, int to, int itemCount) {
+        super.onItemsMoved(recyclerView, from, to, itemCount);
+    }
+
+    @Override
+    public void onItemsAdded(RecyclerView recyclerView, int positionStart, int itemCount) {
+        super.onItemsAdded(recyclerView, positionStart, itemCount);
+    }
+
+    @Override
+    public void onItemsChanged(RecyclerView recyclerView) {
+        super.onItemsChanged(recyclerView);
     }
 
     /**
@@ -257,9 +281,28 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         // Fill the grid for the initial layout of views
         fillGrid(DIRECTION_NONE, childLeft, childTop, recycler, state.isPreLayout(), removedCache);
 
-        // Evaluate any disappearing views that may exist
+        // Evaluate any disappearing views that may exist, they are attached during the preLayout
+        // Hence, the views are not being recycled from the scrapList
         if (!state.isPreLayout() && !recycler.getScrapList().isEmpty()) {
-            // TODO
+
+            // Views still in scrap at this point after #fillGrid() that
+            // aren’t considered removed from the data set are disappearing views
+            // Lay these views out in their off-screen positions so the animation system
+            // can slide them out of view (instead of just fading them out).
+            final List<RecyclerView.ViewHolder> scrapList = recycler.getScrapList();
+            final HashSet<View> disappearingViews = new HashSet<>(scrapList.size());
+
+            for (RecyclerView.ViewHolder viewHolder : scrapList) {
+                final View child = viewHolder.itemView;
+                final LayoutParams lp = (LayoutParams) child.getLayoutParams();
+                if (!lp.isItemRemoved()) {
+                    disappearingViews.add(child);
+                }
+            }
+
+            for (View child : disappearingViews) {
+                layoutDisappearingView(child);
+            }
         }
     }
 
@@ -313,7 +356,7 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
      * @param emptyTop  Top of first visible child, without padding
      * @param recycler
      * @param preLayout
-     * @param removedPositions
+     * @param removedPositions  positions of views (visible & invisible) slated for removal
      */
     private void fillGrid(int direction, int emptyLeft, int emptyTop, RecyclerView.Recycler recycler,
                           boolean preLayout, SparseIntArray removedPositions) {
