@@ -190,7 +190,7 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
                     removedCache.put(lp.getViewPosition(), REMOVE_VISIBLE);
                 }
             }
-
+            // TODO: Check if this method should be placed inside state.isPreLayout()
             // Track view removals that happened out of bounds (i.e. off-screen)
             if (removedCache.size() == 0 && mChangedPositionCount > 0) {
                 for (int i = mFirstChangedPosition; i < mFirstChangedPosition + mChangedPositionCount; ++i) {
