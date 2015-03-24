@@ -107,11 +107,11 @@ public class DividerItemDecoration extends RecyclerView.ItemDecoration {
             RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) child.getLayoutParams();
 
             if (orientation == LinearLayoutManager.VERTICAL) {
-                top = child.getTop() - params.topMargin;
+                top = child.getTop() - params.topMargin - size;
                 bottom = top + size;
             }
             else { //horizontal
-                left = child.getLeft() - params.leftMargin;
+                left = child.getLeft() - params.leftMargin - size;
                 right = left + size;
             }
             mDivider.setBounds(left, top, right, bottom);
