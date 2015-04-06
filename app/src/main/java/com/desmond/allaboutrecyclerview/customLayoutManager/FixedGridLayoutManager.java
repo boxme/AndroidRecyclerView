@@ -187,7 +187,7 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
 
                 if (lp.isItemRemoved()) {
                     // Track these view removals as visible
-                    removedCache.put(lp.getViewPosition(), REMOVE_VISIBLE);
+                    removedCache.put(lp.getViewLayoutPosition(), REMOVE_VISIBLE);
                 }
             }
             // TODO: Check if this method should be placed inside state.isPreLayout()
@@ -409,7 +409,6 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
             }
         }
 
-        Log.d(TAG, "mFirstVisiblePosition " + mFirstVisiblePosition);
         /*
          * Next, advance the visible position based on the fill direction
          * DIRECTION_NONE doesn't advance the position in any direction
@@ -428,7 +427,6 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
                 mFirstVisiblePosition += getTotalColumnCount();
                 break;
         }
-        Log.d(TAG, "mFirstVisiblePosition " + mFirstVisiblePosition);
 
         /*
          * Supply the grid of items that are deemed visible.
@@ -439,10 +437,8 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         int leftOffset = startLeftOffset;
         int topOffset = startTopOffset;
 
-        Log.d(TAG, "visible child count " + getVisibleChildCount());
         for (int i = 0; i < getVisibleChildCount(); i++) {
             int globalChildViewPos = globalViewPositionOfIndex(i);
-            Log.d(TAG, "nextPosition " + globalChildViewPos);
 
             /*
              * When a removal happens out of bounds, the pre-layout positions of items
@@ -896,9 +892,9 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         // Adjust each disappearing view to its proper place
         final LayoutParams lp = (LayoutParams) disappearingChild.getLayoutParams();
 
-        final int newRow = getGlobalRowOfPosition(lp.getViewPosition());
+        final int newRow = getGlobalRowOfPosition(lp.getViewLayoutPosition());
         final int rowDelta = newRow - lp.row;
-        final int newCol = getGlobalColumnOfPosition(lp.getViewPosition());
+        final int newCol = getGlobalColumnOfPosition(lp.getViewLayoutPosition());
         final int colDelta = newCol - lp.column;
 
         layoutTempChildView(disappearingChild, rowDelta, colDelta, disappearingChild);
