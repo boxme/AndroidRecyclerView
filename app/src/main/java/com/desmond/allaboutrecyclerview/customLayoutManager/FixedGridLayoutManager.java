@@ -279,7 +279,8 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         detachAndScrapAttachedViews(recycler);
 
         // Fill the grid for the initial layout of views
-        fillGrid(DIRECTION_NONE, childLeft, childTop, recycler, state.isPreLayout(), removedCache);
+//        fillGrid(DIRECTION_NONE, childLeft, childTop, recycler, state.isPreLayout(), removedCache);
+        fillGrid(DIRECTION_NONE, childLeft, childTop, recycler, state, removedCache);
 
         // Evaluate any disappearing views that may exist, they are attached during the preLayout
         // Hence, the views are not being recycled from the scrapList
@@ -345,8 +346,8 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         }
     }
 
-    private void fillGrid(int direction, RecyclerView.Recycler recycler) {
-        fillGrid(direction, 0, 0, recycler, false, null);
+    private void fillGrid(int direction, RecyclerView.Recycler recycler, RecyclerView.State state) {
+        fillGrid(direction, 0, 0, recycler, state, null);
     }
 
     /**
@@ -355,13 +356,14 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
      * @param emptyLeft Left of first visible child, without padding
      * @param emptyTop  Top of first visible child, without padding
      * @param recycler
-     * @param preLayout
      * @param removedPositions  positions of views (visible & invisible) slated for removal
      */
     private void fillGrid(int direction, int emptyLeft, int emptyTop, RecyclerView.Recycler recycler,
-                          boolean preLayout, SparseIntArray removedPositions) {
+                          RecyclerView.State state, SparseIntArray removedPositions) {
         if (mFirstVisiblePosition < 0) mFirstVisiblePosition = 0;
         if (mFirstVisiblePosition >= getItemCount()) mFirstVisiblePosition = (getItemCount() - 1);
+
+        boolean preLayout = state.isPreLayout();
 
         /*
          * First, we will detach all existing views from the layout.
@@ -372,6 +374,7 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         int startLeftOffset = getPaddingLeft() + emptyLeft;
         int startTopOffset = getPaddingTop() + emptyTop;
 
+        // getChildCount returns the number of child views attached to the RecyclerView
         if (getChildCount() != 0) {
             final View topView = getChildAt(0);
             // Take into account decoration
@@ -437,7 +440,23 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         int leftOffset = startLeftOffset;
         int topOffset = startTopOffset;
 
-        for (int i = 0; i < getVisibleChildCount(); i++) {
+        /*
+         * state.getItemCount() returns the total number of items that can be laid out.
+         * Always use this number for your position calculations and never access the adapter directly.
+         *
+         * RecyclerView listens for Adapter's notify events and calculates the effects of adapter
+         * data changes on existing Views. These calculations are used to decide which animations should be run.
+         *
+         * To support predictive animations, RecyclerView may rewrite or reorder Adapter changes
+         * to present the correct state to LayoutManager in pre-layout pass.
+         * For example, a newly added item is not included in pre-layout item count because pre-layout
+         * reflects the contents of the adapter before the item is added.
+         *
+         * Behind the scenes, RecyclerView offsets getViewForPosition(int) calls such that LayoutManager
+         * does not know about the new item's existence in pre-layout. The item will be available
+         * in second layout pass and will be included in the item count. Similar adjustments are made for moved and removed items as well.
+         */
+        for (int i = 0; i < state.getItemCount(); i++) {
             int globalChildViewPos = globalViewPositionOfIndex(i);
 
             /*
@@ -462,7 +481,7 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
                 globalChildViewPos = offsetPosition;
             }
 
-            if (globalChildViewPos < 0 || globalChildViewPos >= getItemCount()) {
+            if (globalChildViewPos < 0 || globalChildViewPos >= state.getItemCount()) {
                 // Item space beyond the data set, don't attempt to add a view
                 continue;
             }
@@ -650,15 +669,15 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         // Trigger another fill operation to swap views based on the direction scrolled.
         if (dx > 0) {
             if (getDecoratedRight(topView) < 0 && !rightBoundReached) {
-                fillGrid(DIRECTION_RIGHT, recycler);
+                fillGrid(DIRECTION_RIGHT, recycler, state);
             } else if (!rightBoundReached) {
-                fillGrid(DIRECTION_NONE, recycler);
+                fillGrid(DIRECTION_NONE, recycler, state);
             }
         } else {
             if (getDecoratedLeft(topView) > 0 && !leftBoundReached) {
-                fillGrid(DIRECTION_LEFT, recycler);
+                fillGrid(DIRECTION_LEFT, recycler, state);
             } else if (!leftBoundReached) {
-                fillGrid(DIRECTION_NONE, recycler);
+                fillGrid(DIRECTION_NONE, recycler, state);
             }
         }
 
@@ -739,17 +758,17 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         if (dy > 0) {
             if (getDecoratedBottom(topView) < 0 && !bottomBoundReached) {
                 // Continue to scroll down
-                fillGrid(DIRECTION_DOWN, recycler);
+                fillGrid(DIRECTION_DOWN, recycler, state);
             } else if (!bottomBoundReached) {
                 // No more scrolling
-                fillGrid(DIRECTION_NONE, recycler);
+                fillGrid(DIRECTION_NONE, recycler, state);
             }
         } else {
             if (getDecoratedTop(topView) > 0 && !topBoundReached) {
                 // Continue to scroll up
-                fillGrid(DIRECTION_UP, recycler);
+                fillGrid(DIRECTION_UP, recycler, state);
             } else if (!topBoundReached) {
-                fillGrid(DIRECTION_NONE, recycler);
+                fillGrid(DIRECTION_NONE, recycler, state);
             }
         }
 
@@ -760,6 +779,17 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
          * an edge effect.
          */
         return -delta;
+    }
+
+    @Override
+    public View findViewByPosition(int position) {
+        for (int i = 0; i < getChildCount(); i++) {
+            if (globalViewPositionOfIndex(i) == position) {
+                return getChildAt(i);
+            }
+        }
+
+        return null;
     }
 
     /**
