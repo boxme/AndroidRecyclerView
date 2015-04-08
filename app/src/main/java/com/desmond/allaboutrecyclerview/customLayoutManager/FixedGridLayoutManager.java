@@ -205,7 +205,7 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
             // Reset the visible and scroll positions
             mFirstVisiblePosition = 0;
             childLeft = childTop = 0;
-        } else if (!state.isPreLayout() && getVisibleChildCount() >= getItemCount()) {
+        } else if (!state.isPreLayout() && getVisibleChildCount() >= state.getItemCount()) {
             // Data set is too small to be scrolled fully, just reset position
             mFirstVisiblePosition = 0;
             childLeft = childTop = 0;
@@ -234,7 +234,7 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
                 childTop = 0;
 
                 // If the shift over-scrolled the column max, back it off
-                if (mFirstVisiblePosition + mVisibleColumnCount > getItemCount()) {
+                if (mFirstVisiblePosition + mVisibleColumnCount > state.getItemCount()) {
                     mFirstVisiblePosition = Math.max(getItemCount() - mVisibleColumnCount, 0);
                     childLeft = 0;
                 }
