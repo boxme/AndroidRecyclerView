@@ -105,6 +105,9 @@ public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
         super.onItemsMoved(recyclerView, from, to, itemCount);
     }
 
+    /**
+     * onItemsAdded() is always called after pre-layout
+     */
     @Override
     public void onItemsAdded(RecyclerView recyclerView, int positionStart, int itemCount) {
         super.onItemsAdded(recyclerView, positionStart, itemCount);
