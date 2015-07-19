@@ -17,7 +17,7 @@ import android.view.ViewGroup;
 import android.widget.NumberPicker;
 
 import com.desmond.allaboutrecyclerview.R;
-import com.desmond.allaboutrecyclerview.customLayoutManager.FixedGridLayoutManager;
+import com.desmond.allaboutrecyclerview.customLayoutManager.TwoWayGridLayoutManager;
 import com.desmond.allaboutrecyclerview.decoration.InsertDecoration;
 
 /**
@@ -51,7 +51,7 @@ public class FixedTwoWayFragment extends Fragment {
         setHasOptionsMenu(true);
 
         mRecyclerView= (RecyclerView) view.findViewById(R.id.fixed_two_way_recyclerview);
-        FixedGridLayoutManager manager = new FixedGridLayoutManager();
+        TwoWayGridLayoutManager manager = new TwoWayGridLayoutManager();
         manager.setTotalColumnCount(10);
         mRecyclerView.setLayoutManager(manager);
 

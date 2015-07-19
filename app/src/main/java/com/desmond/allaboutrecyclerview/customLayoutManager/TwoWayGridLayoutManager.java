@@ -17,9 +17,9 @@ import java.util.List;
 /**
  * Created by desmond on 9/3/15.
  */
-public class FixedGridLayoutManager extends RecyclerView.LayoutManager {
+public class TwoWayGridLayoutManager extends RecyclerView.LayoutManager {
 
-    public static final String TAG = FixedGridLayoutManager.class.getSimpleName();
+    public static final String TAG = TwoWayGridLayoutManager.class.getSimpleName();
 
     private static final int DEFAULT_COUNT = 1;
 
