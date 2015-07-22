@@ -35,7 +35,10 @@ public class HeaderRecyclerView extends RecyclerView implements IHeaderRecyclerV
 
     void init(Context context, AttributeSet attrs, int defStyleAttr) {
         mAdapterWrapper.wrapAdapter(mHeaderViewAdapter);
+
+        // Register an observer to the adapterWrapper
         mAdapterWrapper.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
+
             @Override
             public void onChanged() {
                 super.onChanged();

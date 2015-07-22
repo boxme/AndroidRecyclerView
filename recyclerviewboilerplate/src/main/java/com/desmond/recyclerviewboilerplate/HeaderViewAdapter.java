@@ -5,6 +5,7 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Credit:
@@ -12,12 +13,7 @@ import java.util.ArrayList;
  */
 public class HeaderViewAdapter extends RecyclerView.Adapter<HeaderViewAdapter.ViewHolder> {
 
-    private static class Header {
-        View mView;
-        int mViewType;
-    }
-
-    ArrayList<Header> mHeaders = new ArrayList<>();
+    List<Header> mHeaders = new ArrayList<>();
     int mViewTypeCount;
 
     public void addHeaderView(int index, View header) {
@@ -26,18 +22,6 @@ public class HeaderViewAdapter extends RecyclerView.Adapter<HeaderViewAdapter.Vi
         h.mViewType = mViewTypeCount++;
         mHeaders.add(index, h);
         notifyDataSetChanged();
-    }
-
-    public class ViewHolder extends RecyclerView.ViewHolder implements GridRecyclerView.SpanningViewHolder {
-
-        public ViewHolder(View itemView) {
-            super(itemView);
-        }
-
-        @Override
-        public int getSpanSize(int spanCount) {
-            return spanCount;
-        }
     }
 
     @Override
@@ -61,5 +45,22 @@ public class HeaderViewAdapter extends RecyclerView.Adapter<HeaderViewAdapter.Vi
     @Override
     public int getItemCount() {
         return mHeaders.size();
+    }
+
+    private static class Header {
+        View mView;
+        int mViewType;
+    }
+
+    public class ViewHolder extends RecyclerView.ViewHolder implements GridRecyclerView.SpanningViewHolder {
+
+        public ViewHolder(View itemView) {
+            super(itemView);
+        }
+
+        @Override
+        public int getSpanSize(int spanCount) {
+            return spanCount;
+        }
     }
 }

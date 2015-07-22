@@ -71,6 +71,12 @@ public class AdapterWrapper extends RecyclerView.Adapter {
         throw new RuntimeException("invalid mAdapter");
     }
 
+    /**
+     * Wrapped the adapter into the AdapterWrapper
+     * by putting it into the WrappedAdapter
+     * @param adapter
+     * @return
+     */
     public WrappedAdapter wrapAdapter(RecyclerView.Adapter adapter) {
         if (adapter == null) {
             throw new AssertionError("adapter must not be null");

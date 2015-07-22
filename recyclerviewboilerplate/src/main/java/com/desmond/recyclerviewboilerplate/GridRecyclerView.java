@@ -14,6 +14,8 @@ public class GridRecyclerView extends HeaderRecyclerView {
 
     SparseIntArray mTypeToSpan;
     GridLayoutManager mGridLayoutManager;
+
+    // A helper class to provide the number of spans each item occupies.
     GridLayoutManager.SpanSizeLookup mSpanSizeLookup;
 
     public GridRecyclerView(Context context) {
@@ -49,7 +51,9 @@ public class GridRecyclerView extends HeaderRecyclerView {
             mGridLayoutManager = new GridLayoutManager(context, numColumns);
             mTypeToSpan = new SparseIntArray();
 
+            // GridLayoutManager to find out the span size of each view from mSpanSizeLookup
             mGridLayoutManager.setSpanSizeLookup(mSpanSizeLookup = new GridLayoutManager.SpanSizeLookup() {
+
                 @Override
                 public int getSpanSize(int position) {
                     int viewType = getAdapter().getItemViewType(position);
